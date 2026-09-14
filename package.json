@@ -1,0 +1,11 @@
+{
+  "name": "simhost-api-examples",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "JavaScript examples for learning the Simhost User API",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "devices": "node --env-file=.env examples/01-list-devices.js"
+  }
+}
