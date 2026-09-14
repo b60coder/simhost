@@ -11,7 +11,9 @@ try {
     throw new Error('Remove the word Bearer from SIMHOST_API_TOKEN; this script adds it.');
   }
   if (!baseUrl) throw new Error('Set SIMHOST_API_BASE_URL in .env.');
-  const url = new URL(`${baseUrl.replace(/\/+$/, '')}/user/api/v1/devices`);
+  if (process.argv.slice(2).some((value) => value !== '--live')) throw new Error('Usage: npm run devices -- [--live]');
+  const endpoint = process.argv.includes('--live') ? 'devices/live-status' : 'devices';
+  const url = new URL(`${baseUrl.replace(/\/+$/, '')}/user/api/v1/${endpoint}`);
   if (url.protocol !== 'https:') throw new Error('Use an HTTPS API base URL.');
 
   const response = await fetch(url, {
