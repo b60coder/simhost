@@ -6,6 +6,14 @@
   "description": "JavaScript examples for learning the Simhost User API",
   "engines": { "node": ">=22" },
   "scripts": {
-    "devices": "node --env-file=.env examples/01-list-devices.js"
+    "devices": "node --env-file=.env examples/01-list-devices.js",
+    "sms:send": "node --env-file=.env examples/02-send-sms.js",
+    "esim:list": "node --env-file=.env examples/03-list-esim-profiles.js",
+    "esim:enable": "node --env-file=.env examples/04-enable-esim-profile.js",
+    "campaign:create": "node --env-file=.env examples/05-create-sms-campaign.js",
+    "campaign:start": "node --env-file=.env examples/06-start-sms-campaign.js",
+    "campaign:monitor": "node --env-file=.env examples/07-monitor-sms-campaign.js",
+    "campaign:contacts": "node --env-file=.env examples/08-add-campaign-contacts.js",
+    "test": "node --test"
   }
 }
