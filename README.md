@@ -109,7 +109,8 @@ simhost/
 ├── README.md
 ├── docs/images/
 └── examples/
-    └── 01-list-devices.js
+    ├── 01-list-devices.js
+    └── … additional examples below
 ```
 
 **Keep `.env` private.** This repository's `.gitignore` excludes it. Never paste a real token into GitHub, screenshots, support messages, or browser frontend code. If you accidentally share it, revoke it and create a replacement. You can verify the ignore rule with `git check-ignore .env`; it should print `.env`.
@@ -225,18 +226,148 @@ Run it from the repository folder. Source only your own trusted `.env` file: she
 
 When requesting help, share the command, endpoint, status code, and a redacted error message. Remove tokens, phone numbers, and other private account data.
 
-## Example roadmap
+## Run the examples
 
-The first runnable example is device listing. The remaining tutorials are planned:
+All eight examples below are included. Run commands from the repository folder after completing the `.env` setup above. Replace uppercase placeholders with your own values. Keep quotes around messages and campaign names. The `--` after an npm script name forwards the remaining arguments to JavaScript.
 
-| Example | Purpose | Status |
+| Example | Command | What it does |
 | --- | --- | --- |
-| [List devices](examples/01-list-devices.js) | Verify authentication and list assigned devices | Included |
-| Send SMS | Send a message through an assigned device | Planned |
-| List eSIM profiles | Inspect profiles on each device | Planned |
-| Enable an eSIM profile | Switch the enabled profile within a device | Planned |
-| Create an SMS campaign | Prepare a campaign and its recipients | Planned |
-| Start an SMS campaign | Explicitly trigger a prepared campaign | Planned |
-| Monitor an SMS campaign | Inspect progress and recipient results; explain usage fields exposed by the API | Planned |
+| [01 · List devices](examples/01-list-devices.js) | `npm run devices` | List devices assigned to your user |
+| [01 · Check live status](examples/01-list-devices.js) | `npm run devices -- --live` | Request refreshed availability and registration status |
+| [02 · Send SMS](examples/02-send-sms.js) | `npm run sms:send -- DEVICE_UUID "+12025550123" "Hello from Simhost" REQUEST_ID` | Send one SMS with a stable request ID |
+| [03 · List eSIM profiles](examples/03-list-esim-profiles.js) | `npm run esim:list -- DEVICE_UUID` | Inspect installed profiles on one device |
+| [03 · Inspect all devices](examples/03-list-esim-profiles.js) | `npm run esim:list -- all` | Inspect each assigned device sequentially |
+| [04 · Enable an eSIM](examples/04-enable-esim-profile.js) | `npm run esim:enable -- DEVICE_UUID PROFILE_ICCID` | Select an installed profile within that device |
+| [05 · Create a campaign](examples/05-create-sms-campaign.js) | `npm run campaign:create -- "First campaign" DEVICE_UUID "Hello <first_name>"` | Create a draft without sending |
+| [08 · Add recipients](examples/08-add-campaign-contacts.js) | `npm run campaign:contacts -- CAMPAIGN_UUID contacts.json` | Replace and validate the campaign recipient list |
+| [06 · Start a campaign](examples/06-start-sms-campaign.js) | `npm run campaign:start -- CAMPAIGN_UUID` | Begin sending to the prepared recipients |
+| [07 · Monitor a campaign](examples/07-monitor-sms-campaign.js) | `npm run campaign:monitor -- CAMPAIGN_UUID 12` | Check progress up to 12 times, 10 seconds apart |
+
+### A. Choose a device and send one SMS
+
+1. Run `npm run devices -- --live`.
+2. Find your device's `device_uuid` in the response (some responses use `deviceUuid`). Keep it for the commands below. A UUID identifies the **device**, while an ICCID identifies a **SIM profile**; do not substitute one for the other.
+3. Inspect `enabled`, `registered`, `live`, `operationalStatus`, and `statusCheckedAt` when returned. An assigned device is not necessarily ready to send. Missing or unavailable live status should not be treated as ready. The API makes the final readiness check at send time.
+4. Generate a request ID with this command and save its output:
+
+```sh
+node -e "console.log(require('node:crypto').randomUUID())"
+```
+
+5. Replace `DEVICE_UUID` and `REQUEST_ID` and use a destination you control or have permission to message:
+
+```sh
+npm run sms:send -- DEVICE_UUID "+12025550123" "Hello from Simhost" REQUEST_ID
+```
+
+The number above is illustrative. Replace it with the actual destination in international format. This command sends a real SMS and may consume your plan allowance.
+
+The request uses `POST /user/api/v1/devices/{deviceUuid}/sms/send` with:
+
+```json
+{
+  "destination": "+12025550123",
+  "message": "Hello from Simhost",
+  "clientRequestId": "YOUR_SAVED_REQUEST_ID"
+}
+```
+
+**Keep the same request ID for the same SMS if the result is uncertain.** A timeout does not prove that sending failed. Do not generate a new ID and blindly resend. Inspect the status/history first; if replaying the request, keep its device, destination, text, and ID unchanged. A new intentional message needs a new request ID. The examples never automatically retry writes.
+
+### B. List profiles and switch the enabled eSIM
+
+```sh
+npm run esim:list -- DEVICE_UUID
+npm run esim:list -- all
+```
+
+The script calls `GET /user/api/v1/devices/{deviceUuid}/esim`. Inspect `selectedIccid`, `selectionValid`, `managementAvailable`, and the profile list. Depending on the response, that list is in `profiles` or `profiles.profiles`; the script prints the full response to preserve those details. A profile can expose `iccid`, `selected`, `enabled`, and `state`.
+
+If `managementAvailable` is false or `profiles.cached` is true, you are seeing cached information, not a fresh inventory of the card. Resolve the reader/service problem before switching profiles. The `all` command continues past individual device errors and exits with a nonzero status if any request failed. Devices explicitly marked as physical SIMs are skipped.
+
+Copy the **ICCID of an installed alternative profile**, then run:
+
+```sh
+npm run esim:enable -- DEVICE_UUID PROFILE_ICCID
+```
+
+This uses `POST /user/api/v1/devices/{deviceUuid}/esim` with `{ "action": "select", "iccid": "PROFILE_ICCID" }`. Keep the ICCID as a string so no digits are lost. This is a one-time switch, not a repeating rotation schedule. It does not download or delete a profile.
+
+Switching changes the device's active SIM identity and may interrupt connectivity. Do not disable the current profile first: selecting the alternative is the supported operation. Inspect the returned `selectedIccid` and `network.ready`. If the profile is selected but network readiness is still pending, run `npm run devices -- --live` again before sending SMS. After a timeout, list profiles first to determine whether the switch already happened.
+
+The eSIM routes above were checked against the application backend; they may not yet appear in every deployed API reference. A 404/503 can indicate that this route or the reader service is unavailable on your deployment.
+
+### C. Create, populate, start, and monitor a campaign
+
+The workflow is **05 Create draft → 08 Add contacts → 06 Start → 07 Monitor**. The recipient import is a separate reusable example so you can inspect the accepted recipients before starting.
+
+**Step 1 — Create the draft.** Replace `DEVICE_UUID` with your assigned sending device:
+
+```sh
+npm run campaign:create -- "First campaign" DEVICE_UUID "Hello <first_name>, this is a Simhost test."
+```
+
+Copy `campaign.campaignUuid` from the result. Every later campaign command uses that value as `CAMPAIGN_UUID`. The request creates a draft with `deviceUuids` and `config.message`; it does not send messages. If creation times out, check the campaign list in the web app before repeating the command, because another request could create a duplicate draft.
+
+**Step 2 — Create `contacts.json`.** Open your editor, create this file in the repository root, and replace the illustrative contact below with a real test recipient:
+
+```json
+[
+  { "phone_number": "+12025550123", "first_name": "Sam" }
+]
+```
+
+Add more objects to the array for more recipients. The `first_name` value fills `<first_name>` in the message. Use one test recipient first. `contacts.json` is excluded from Git because it can contain private phone numbers; use the same care if you save contacts under another filename.
+
+**Step 3 — Import the recipients.**
+
+```sh
+npm run campaign:contacts -- CAMPAIGN_UUID contacts.json
+```
+
+The script sends `{ "contactRows": [...] }` to `POST /user/api/v1/sms-campaigns/{campaignUuid}/contacts`. Inspect `accepted` and the returned contacts after validation and deduplication. This endpoint **replaces** the existing recipients; it does not append. Prepare contacts while the campaign is a draft. This example can also repopulate an existing draft without creating another campaign.
+
+**Step 4 — Review, then start.** Before starting, you can inspect the draft and pending results with:
+
+```sh
+npm run campaign:monitor -- CAMPAIGN_UUID
+```
+
+When the sending device, message, and recipients are correct:
+
+```sh
+npm run campaign:start -- CAMPAIGN_UUID
+```
+
+This command triggers real messages. It calls `POST /user/api/v1/sms-campaigns/{campaignUuid}/start`; it is intentionally separate from creating the draft. If the request times out, inspect the campaign status before attempting another start.
+
+**Step 5 — Monitor progress and usage counts.**
+
+```sh
+npm run campaign:monitor -- CAMPAIGN_UUID 12
+```
+
+Omit `12` for one snapshot. A count of 12 makes up to 12 checks, 10 seconds apart, and stops early for completed, cancelled, failed, indeterminate, or no-device states. Press **Ctrl+C** to stop the monitor; this does **not** pause or cancel the server-side campaign. Use the web app's campaign controls to pause it.
+
+Each check reads both the campaign and `/results` and prints their full responses:
+
+| Field | Meaning |
+| --- | --- |
+| `campaign.status` / `summary.status` | Current campaign state |
+| `summary.total` | Total execution recipients |
+| `summary.pending` | Recipients still waiting |
+| `summary.sending` | Recipients currently being processed |
+| `summary.sent` | Carrier-accepted sends; not proof of delivery to the handset |
+| `summary.failed` | Failed recipients; inspect `last_error` before deciding what to do |
+| `summary.indeterminate` | Uncertain outcomes requiring reconciliation; do not blindly resend |
+| `results` | Recipient details, including `phone_number`, `status`, `attempts`, `device_uuid`, `sent_on`, and `last_error` |
+
+Campaign metadata also exposes counters such as `recipientCount`, `sentCount`, `failedCount`, `acceptedCount`, and `indeterminateCount`. Do not add `sentCount` and `acceptedCount` together as if they were separate recipients. The two requests are sequential snapshots, so counters can change between them while a campaign runs.
+
+**These are execution counts, not billing amounts or SMS-segment usage.** The inspected campaign API does not expose a campaign currency charge. Longer messages can have different segment usage; do not infer a bill from recipient counts. The current results endpoint returns at most 1,000 recipient rows and does not expose pagination here, so use `summary` for whole-campaign totals and treat `results` as potentially incomplete for larger campaigns.
+
+### Validation
+
+Run `npm test` to check the example request paths, payloads, validation, and error handling against mocked responses. Tests use fake credentials and do not send SMS, change eSIMs, or create campaigns. These examples have been checked against the local backend contracts; live execution still depends on your account, assigned devices, and deployed API version.
 
 For endpoint definitions, request fields, and responses, see the [Simhost API reference](https://openapi.simhost.io/).
