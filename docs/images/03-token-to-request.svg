@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="660" viewBox="0 0 1100 660" role="img" aria-labelledby="title desc"><title id="title">From copied token to authenticated request</title><desc id="desc">The full token goes into .env without Bearer. Node loads it and JavaScript sends Authorization colon Bearer followed by the token.</desc>
+<rect width="1100" height="660" fill="#F1F5F9"/>
+<style>text{font-family:Arial,Helvetica,sans-serif} .mono{font-family:monospace}</style>
+<text x="34" y="48" font-size="28" fill="#172033" font-weight="700">3 / From your token to an API request</text>
+<text x="34" y="80" font-size="18" fill="#047857" font-weight="400">GREEN · Use     The script adds Bearer; you store only the token.</text>
+<rect x="34" y="116" width="1032" height="112" rx="12" fill="#FFFBEB" stroke="#92400E" stroke-width="2"/>
+<circle cx="65" cy="148" r="17" fill="#92400E"/>
+<text x="60" y="154" font-size="17" fill="#FFFFFF" font-weight="700">1</text>
+<text x="95" y="154" font-size="21" fill="#92400E" font-weight="700">Copy from the new token row in Simhost</text>
+<text x="59" y="196" font-size="20" fill="#92400E" font-weight="400">YOUR_FULL_TOKEN   ←   illustrative placeholder only</text>
+<rect x="34" y="251" width="1032" height="126" rx="12" fill="#ECFDF5" stroke="#047857" stroke-width="2"/>
+<circle cx="65" cy="283" r="17" fill="#047857"/>
+<text x="60" y="289" font-size="17" fill="#FFFFFF" font-weight="700">2</text>
+<text x="95" y="289" font-size="21" fill="#047857" font-weight="700">Paste into the local file named .env</text>
+<text x="59" y="325" font-size="19" fill="#172033" font-weight="400">SIMHOST_API_BASE_URL=https://app.simhost.io/api</text>
+<text x="59" y="355" font-size="19" fill="#047857" font-weight="700">SIMHOST_API_TOKEN=YOUR_FULL_TOKEN</text>
+<rect x="34" y="400" width="485" height="156" rx="12" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+<circle cx="65" cy="432" r="17" fill="#047857"/>
+<text x="60" y="438" font-size="17" fill="#FFFFFF" font-weight="700">3</text>
+<text x="95" y="438" font-size="21" fill="#047857" font-weight="700">Node.js loads .env</text>
+<text x="59" y="480" font-size="17" fill="#172033" font-weight="400">node --env-file=.env</text>
+<text x="59" y="506" font-size="17" fill="#172033" font-weight="400">  examples/01-list-devices.js</text>
+<text x="59" y="532" font-size="17" fill="#172033" font-weight="400">Read: process.env.SIMHOST_API_TOKEN</text>
+<rect x="566" y="400" width="500" height="156" rx="12" fill="#ECFDF5" stroke="#047857" stroke-width="2"/>
+<circle cx="597" cy="432" r="17" fill="#047857"/>
+<text x="592" y="438" font-size="17" fill="#FFFFFF" font-weight="700">4</text>
+<text x="627" y="438" font-size="21" fill="#047857" font-weight="700">API request header</text>
+<text x="591" y="480" font-size="19" fill="#047857" font-weight="400">Authorization:</text>
+<text x="591" y="506" font-size="19" fill="#047857" font-weight="400">Bearer YOUR_FULL_TOKEN</text>
+<text x="591" y="532" font-size="19" fill="#047857" font-weight="400">One space after Bearer.</text>
+<path d="M525 481 L560 481" fill="none" stroke="#047857" stroke-width="3"/>
+<path d="M551 475 L560 481 L551 487" fill="none" stroke="#047857" stroke-width="3"/>
+<rect x="34" y="579" width="1032" height="47" rx="12" fill="#ECFDF5" stroke="#047857" stroke-width="2"/>
+<text x="55" y="609" font-size="21" fill="#047857" font-weight="700">Local .env  →  Node.js  →  Authorization header  →  Simhost API</text>
+<text x="34" y="648" font-size="14" fill="#526079" font-weight="400">Never put the token in a public repository or frontend bundle. Keep .env private.</text>
+</svg>
